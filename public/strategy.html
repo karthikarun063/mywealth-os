@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Financial Strategy — MyWealth OS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="/css/main.css"/>
+<style>
+body{background:#020817;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif}
+.navbar-brand{font-weight:800;color:#a78bfa!important}
+.card{background:#0f172a;border:1px solid #1e293b;border-radius:14px}
+.card-header{background:transparent;border-bottom:1px solid #1e293b;font-weight:700}
+.score-ring{position:relative;display:inline-block}
+.score-ring svg{transform:rotate(-90deg)}
+.score-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.score-number{font-size:2.5rem;font-weight:900;line-height:1}
+.risk-pill{display:inline-block;padding:6px 18px;border-radius:50px;font-weight:700;font-size:.9rem}
+.metric-box{background:#0a0f1e;border:1px solid #1e293b;border-radius:12px;padding:16px}
+.metric-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:700}
+.metric-value{font-size:1.4rem;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.action-card{background:#0a0f1e;border:1px solid #1e293b;border-radius:12px;padding:14px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
+.action-num{width:32px;height:32px;border-radius:50%;background:#7c3aed;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem}
+.action-body .action-title{font-weight:700;color:#f1f5f9;font-size:.9rem}
+.action-body .action-impact{font-size:.78rem;color:#64748b;margin-top:2px}
+.action-body .urgency-badge{font-size:.68rem;padding:2px 8px;border-radius:20px;background:#1e293b;color:#94a3b8;margin-top:4px;display:inline-block}
+.step-item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #1e293b}
+.step-item:last-child{border-bottom:none}
+.step-num{width:24px;height:24px;border-radius:50%;background:#1e293b;color:#a78bfa;font-weight:700;font-size:.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:.875rem;color:#94a3b8;line-height:1.5}
+.risk-indicator{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;margin-bottom:8px}
+.risk-indicator.bg-danger-soft{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2)}
+.risk-indicator.bg-warning-soft{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2)}
+.risk-indicator.bg-success-soft{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2)}
+.risk-icon{font-size:1.3rem;flex-shrink:0}
+.risk-label{font-size:.78rem;color:#64748b;text-transform:uppercase;letter-spacing:.06em}
+.risk-val{font-size:1rem;font-weight:700}
+.goal-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #1e293b}
+.goal-row:last-child{border-bottom:none}
+.progress{background:#1e293b;height:6px}
+.btn-back{color:#a78bfa;text-decoration:none;font-size:.85rem}
+.btn-back:hover{color:#c4b5fd}
+.skeleton{background:linear-gradient(90deg,#1e293b 25%,#334155 50%,#1e293b 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark px-4 py-3" style="background:#0f172a;border-bottom:1px solid #1e293b">
+  <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+    <div style="width:32px;height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px">₹</div>
+    MyWealth OS
+  </a>
+  <div class="d-flex align-items-center gap-3">
+    <a href="/simulator.html" class="btn btn-outline-secondary btn-sm">🎮 Decision Simulator</a>
+    <a href="/" class="btn-back">← Dashboard</a>
+  </div>
+</nav>
+
+<div class="container-xl py-4" id="app">
+  <!-- Loading state -->
+  <div id="loading" class="text-center py-5">
+    <div class="spinner-border" style="color:#7c3aed;width:3rem;height:3rem" role="status"></div>
+    <p class="mt-3" style="color:#64748b">Analysing your financial data…</p>
+  </div>
+  <!-- Content -->
+  <div id="content" class="d-none"></div>
+</div>
+
+<script>
+const RISK_COLORS = { Low:'#10b981', Moderate:'#f59e0b', High:'#f97316', Critical:'#ef4444' };
+const STATUS_BADGE = {
+  CRITICAL:   'badge bg-danger',
+  'HIGH RISK':'badge bg-danger',
+  WARNING:    'badge bg-warning text-dark',
+  MODERATE:   'badge bg-warning text-dark',
+  LOW:        'badge bg-warning text-dark',
+  AVERAGE:    'badge bg-warning text-dark',
+  GOOD:       'badge bg-success',
+  SAFE:       'badge bg-success',
+  STRONG:     'badge bg-success',
+};
+
+function inr(n) {
+  const abs = Math.abs(+n||0);
+  const s = abs >= 1e7 ? `${(abs/1e7).toFixed(2)} Cr`
+          : abs >= 1e5 ? `${(abs/1e5).toFixed(1)} L`
+          : abs >= 1e3 ? `${(abs/1e3).toFixed(1)} K`
+          : `${Math.round(abs)}`;
+  return '₹' + s;
+}
+
+function scoreGradient(score) {
+  if (score >= 75) return '#10b981';
+  if (score >= 50) return '#f59e0b';
+  if (score >= 25) return '#f97316';
+  return '#ef4444';
+}
+
+async function loadReport() {
+  try {
+    const r = await fetch('/api/strategy-report');
+    const d = await r.json();
+    render(d);
+  } catch(e) {
+    document.getElementById('loading').innerHTML =
+      `<div class="alert alert-danger">Failed to load strategy report: ${e.message}</div>`;
+  }
+}
+
+function render(d) {
+  document.getElementById('loading').classList.add('d-none');
+  const el = document.getElementById('content');
+  el.classList.remove('d-none');
+
+  const color = scoreGradient(d.score);
+  const rColor = RISK_COLORS[d.risk_level] || '#f59e0b';
+  const circ = 2 * Math.PI * 54;
+  const filled = (d.score / 100) * circ;
+  const m = d.metrics;
+
+  el.innerHTML = `
+<!-- ── Header ── -->
+<div class="d-flex align-items-start justify-content-between mb-4 flex-wrap gap-3">
+  <div>
+    <h1 class="fw-bold mb-1" style="font-size:1.6rem;color:#f1f5f9">Financial Strategy Report</h1>
+    <p style="color:#64748b;font-size:.85rem">Generated ${new Date(d.generated_at).toLocaleString('en-IN')}</p>
+  </div>
+  <button class="btn btn-sm btn-outline-secondary" onclick="loadReport()">↻ Refresh</button>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Score card -->
+  <div class="col-lg-3">
+    <div class="card h-100">
+      <div class="card-body d-flex flex-column align-items-center justify-content-center p-4">
+        <p class="metric-label mb-3">Overall Financial Score</p>
+        <div class="score-ring">
+          <svg width="140" height="140" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="#1e293b" stroke-width="10"/>
+            <circle cx="60" cy="60" r="54" fill="none" stroke="${color}" stroke-width="10"
+              stroke-linecap="round"
+              stroke-dasharray="${filled} ${circ}"
+              style="transition:stroke-dasharray 1s ease"/>
+          </svg>
+          <div class="score-text">
+            <div class="score-number" style="color:${color}">${d.score}</div>
+            <div style="font-size:.7rem;color:#64748b">/100</div>
+          </div>
+        </div>
+        <div class="mt-3 text-center">
+          <span class="risk-pill" style="background:${rColor}20;color:${rColor};border:1px solid ${rColor}40">
+            ${d.risk_level} Risk
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header px-4 py-3">Risk Indicators</div>
+      <div class="card-body p-3">
+        ${[
+          { icon:'🛡️', label:'Emergency Fund', val:`${m.emergency_fund_months.toFixed(1)} months`, status: m.emergency_fund_status, sub:`${inr(m.liquid_assets)} liquid` },
+          { icon:'⚖️', label:'Debt-to-Income', val:`${m.debt_ratio_pct.toFixed(1)}%`, status: m.debt_status, sub:`${inr(m.total_debt)} outstanding` },
+          { icon:'💰', label:'Savings Rate', val:`${m.savings_rate_pct.toFixed(1)}%`, status: m.savings_status, sub:`${inr(m.monthly_income - m.monthly_expense)}/mo saved` },
+          { icon:'📊', label:'Portfolio Concentration', val:`${m.portfolio_concentration_pct.toFixed(0)}%`, status: m.concentration_status, sub:'max in one class' },
+        ].map(x => {
+          const st = x.status || 'GOOD';
+          const cls = st.includes('CRITICAL')||st.includes('HIGH')||st.includes('LOW')
+            ? 'bg-danger-soft' : st.includes('WARNING')||st.includes('MODERATE')||st.includes('AVERAGE')
+            ? 'bg-warning-soft' : 'bg-success-soft';
+          const c2 = st.includes('CRITICAL')||st.includes('HIGH')||st.includes('LOW')
+            ? '#f87171' : st.includes('WARNING')||st.includes('MODERATE')||st.includes('AVERAGE')
+            ? '#fbbf24' : '#34d399';
+          return `<div class="risk-indicator ${cls}">
+            <span class="risk-icon">${x.icon}</span>
+            <div style="flex:1">
+              <div class="risk-label">${x.label}</div>
+              <div class="risk-val" style="color:${c2}">${x.val}</div>
+              <div style="font-size:.72rem;color:#64748b">${x.sub}</div>
+            </div>
+            <span class="${STATUS_BADGE[st]||'badge bg-secondary'}" style="font-size:.65rem">${st}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- Snapshot -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header px-4 py-3">Wealth Snapshot</div>
+      <div class="card-body p-3">
+        <div class="row g-2">
+          ${[
+            ['Total Assets',   inr(m.total_assets),          '#34d399'],
+            ['Total Debt',     inr(m.total_debt),            '#f87171'],
+            ['Net Worth',      inr(m.total_assets-m.total_debt), m.total_assets>m.total_debt?'#a78bfa':'#f87171'],
+            ['Monthly Income', inr(m.monthly_income),        '#94a3b8'],
+            ['Monthly Spend',  inr(m.monthly_expense),       '#94a3b8'],
+            ['Monthly EMI',    inr(m.total_emi),             '#fbbf24'],
+          ].map(([l,v,c])=>`
+            <div class="col-6">
+              <div class="metric-box">
+                <div class="metric-label">${l}</div>
+                <div class="metric-value" style="color:${c};font-size:1.1rem">${v}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Top risks -->
+${d.top_risks.length ? `
+<div class="card mb-4">
+  <div class="card-header px-4 py-3 d-flex align-items-center gap-2">
+    <span>🚨</span> Top Identified Risks
+  </div>
+  <div class="card-body p-3">
+    <div class="row g-2">
+      ${d.top_risks.map((r,i)=>`
+        <div class="col-md-6">
+          <div style="display:flex;gap:10px;align-items:flex-start;background:#0a0f1e;border:1px solid #1e293b;border-radius:10px;padding:12px">
+            <span style="color:#f87171;font-weight:800;flex-shrink:0">${i+1}.</span>
+            <span style="color:#f1f5f9;font-size:.875rem">${r}</span>
+          </div>
+        </div>`).join('')}
+    </div>
+  </div>
+</div>` : ''}
+
+<div class="row g-3 mb-4">
+  <!-- Recommended Actions -->
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header px-4 py-3">🎯 Recommended Actions</div>
+      <div class="card-body p-3">
+        ${d.recommended_actions.map(a=>`
+          <div class="action-card">
+            <div class="action-num">${a.priority}</div>
+            <div class="action-body">
+              <div class="action-title">${a.action}</div>
+              <div class="action-impact">${a.impact}</div>
+              <span class="urgency-badge">⏱ ${a.urgency}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- 30 / 90 day plans -->
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header px-4 py-3">📅 Next 30 Days</div>
+      <div class="card-body p-3">
+        ${d.next_30_days.map((s,i)=>`
+          <div class="step-item">
+            <div class="step-num">${i+1}</div>
+            <div class="step-text">${s}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header px-4 py-3">🚀 Next 90 Days</div>
+      <div class="card-body p-3">
+        ${d.next_90_days.map((s,i)=>`
+          <div class="step-item">
+            <div class="step-num">${i+1}</div>
+            <div class="step-text">${s}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Goal summary -->
+${d.goals_summary.length ? `
+<div class="card mb-4">
+  <div class="card-header px-4 py-3">🏆 Goal Progress</div>
+  <div class="card-body p-3">
+    ${d.goals_summary.map(g=>`
+      <div class="goal-row">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.875rem;font-weight:600;color:#f1f5f9">${g.name}</div>
+        </div>
+        <div style="width:160px">
+          <div class="progress" style="height:6px;border-radius:4px">
+            <div class="progress-bar" style="width:${Math.min(100,g.progress)}%;background:${g.progress>=100?'#10b981':'#7c3aed'}"></div>
+          </div>
+        </div>
+        <div style="width:50px;text-align:right;font-size:.8rem;font-variant-numeric:tabular-nums;color:#94a3b8">${g.progress}%</div>
+        <div style="width:80px;text-align:right">
+          ${g.on_track
+            ? '<span class="badge bg-success" style="font-size:.65rem">On Track</span>'
+            : '<span class="badge bg-warning text-dark" style="font-size:.65rem">Behind</span>'}
+        </div>
+      </div>`).join('')}
+  </div>
+</div>` : ''}
+
+<div class="text-center mt-2 mb-4">
+  <a href="/simulator.html" class="btn btn-lg" style="background:#7c3aed;color:#fff;padding:12px 32px;border-radius:12px">
+    🎮 Simulate a Financial Decision →
+  </a>
+</div>
+`;
+}
+
+loadReport();
+</script>
+</body>
+</html>

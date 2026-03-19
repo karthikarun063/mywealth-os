@@ -1,7 +1,7 @@
 {
   "name": "mywealth-os",
   "version": "2.0.0",
-  "description": "Privacy-first personal wealth OS \u2014 Node.js + Express + PostgreSQL",
+  "description": "Privacy-first personal wealth OS — Node.js + Express + PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -17,6 +17,7 @@
     "express": "^4.19.2",
     "express-validator": "^7.2.0",
     "morgan": "^1.10.0",
+    "pdfkit": "^0.18.0",
     "pg": "^8.12.0"
   },
   "devDependencies": {

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Decision Simulator — MyWealth OS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="/css/main.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+body{background:#020817;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif}
+.navbar-brand{font-weight:800;color:#a78bfa!important}
+.card{background:#0f172a;border:1px solid #1e293b;border-radius:14px}
+.card-header{background:transparent;border-bottom:1px solid #1e293b;font-weight:700}
+.form-control,.form-select{background:#0a0f1e!important;border:1px solid #1e293b!important;color:#e2e8f0!important;border-radius:10px}
+.form-control:focus,.form-select:focus{border-color:#7c3aed!important;box-shadow:0 0 0 2px rgba(124,58,237,.15)!important;color:#e2e8f0!important}
+.form-label{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:700}
+.type-btn{background:#0a0f1e;border:2px solid #1e293b;color:#94a3b8;border-radius:12px;padding:14px 10px;cursor:pointer;text-align:center;transition:all .15s;width:100%}
+.type-btn:hover{border-color:#7c3aed;color:#a78bfa}
+.type-btn.active{border-color:#7c3aed;background:#7c3aed20;color:#c4b5fd}
+.type-btn .icon{font-size:1.6rem;display:block;margin-bottom:4px}
+.type-btn .label{font-size:.78rem;font-weight:700}
+.compare-box{background:#0a0f1e;border:1px solid #1e293b;border-radius:12px;padding:16px}
+.compare-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:700;margin-bottom:8px}
+.compare-val{font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums}
+.compare-arrow{font-size:1.8rem;color:#64748b;align-self:center}
+.result-card{border-radius:14px;padding:16px;margin-bottom:12px}
+.result-card.success{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2)}
+.result-card.warning{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2)}
+.result-card.danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2)}
+.proceed-btn{background:#10b981;color:#fff;border:none;padding:12px 28px;border-radius:12px;font-weight:700;font-size:.95rem}
+.caution-btn{background:#f59e0b;color:#000;border:none;padding:12px 28px;border-radius:12px;font-weight:700;font-size:.95rem}
+.stop-btn{background:#ef4444;color:#fff;border:none;padding:12px 28px;border-radius:12px;font-weight:700;font-size:.95rem}
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark px-4 py-3" style="background:#0f172a;border-bottom:1px solid #1e293b">
+  <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+    <div style="width:32px;height:32px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px">₹</div>
+    MyWealth OS
+  </a>
+  <div class="d-flex align-items-center gap-3">
+    <a href="/strategy.html" class="btn btn-outline-secondary btn-sm">📊 Strategy Report</a>
+    <a href="/" style="color:#a78bfa;text-decoration:none;font-size:.85rem">← Dashboard</a>
+  </div>
+</nav>
+
+<div class="container-xl py-4">
+  <div class="mb-4">
+    <h1 class="fw-bold mb-1" style="font-size:1.6rem;color:#f1f5f9">🎮 Decision Simulator</h1>
+    <p style="color:#64748b;font-size:.875rem">Simulate the financial impact of any major decision before making it.</p>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left: Input panel -->
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header px-4 py-3">Configure Decision</div>
+        <div class="card-body p-4">
+
+          <!-- Decision type -->
+          <div class="mb-4">
+            <label class="form-label mb-2">Decision Type</label>
+            <div class="row g-2" id="type-grid">
+              ${[
+                {val:'buy_car',       icon:'🚗', label:'Buy Car'},
+                {val:'buy_house',     icon:'🏠', label:'Buy House'},
+                {val:'take_loan',     icon:'🏦', label:'Take Loan'},
+                {val:'increase_sip',  icon:'📈', label:'Increase SIP'},
+                {val:'invest_lump_sum',icon:'💼', label:'Lump Sum Invest'},
+              ].map(t=>`
+                <div class="col-4">
+                  <button class="type-btn${t.val==='buy_car'?' active':''}" data-val="${t.val}" onclick="selectType(this)">
+                    <span class="icon">${t.icon}</span>
+                    <span class="label">${t.label}</span>
+                  </button>
+                </div>`).join('')}
+            </div>
+          </div>
+
+          <!-- Amount -->
+          <div class="mb-3">
+            <label class="form-label" id="amount-label">Purchase / Loan Amount (₹)</label>
+            <input type="number" class="form-control" id="amount" placeholder="e.g. 800000" min="1" step="10000"/>
+          </div>
+
+          <!-- Conditional fields -->
+          <div id="loan-fields">
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label class="form-label">Interest Rate (% p.a.)</label>
+                <input type="number" class="form-control" id="interest_rate" placeholder="e.g. 8.5" step="0.1" min="0"/>
+              </div>
+              <div class="col-6">
+                <label class="form-label">Tenure (months)</label>
+                <input type="number" class="form-control" id="tenure" placeholder="e.g. 60" min="1" max="600"/>
+              </div>
+            </div>
+          </div>
+
+          <div id="sip-field" class="d-none mb-3">
+            <label class="form-label">Monthly SIP Increase (₹)</label>
+            <input type="number" class="form-control" id="sip_change" placeholder="e.g. 5000" min="1"/>
+          </div>
+
+          <button class="btn w-100 mt-2" style="background:#7c3aed;color:#fff;border-radius:10px;padding:11px;font-weight:700" onclick="simulate()">
+            ⚡ Simulate Decision
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Results -->
+    <div class="col-lg-7" id="results-panel">
+      <div class="card h-100" style="min-height:400px">
+        <div class="card-body d-flex flex-column align-items-center justify-content-center p-4" id="results-placeholder">
+          <div style="font-size:3rem">🎯</div>
+          <p class="mt-3" style="color:#64748b">Configure a decision on the left and click Simulate to see the impact.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentType = 'buy_car';
+
+function selectType(btn) {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentType = btn.dataset.val;
+
+  const loanFields = document.getElementById('loan-fields');
+  const sipField   = document.getElementById('sip-field');
+  const amtLabel   = document.getElementById('amount-label');
+
+  if (['buy_car','buy_house','take_loan'].includes(currentType)) {
+    loanFields.classList.remove('d-none');
+    sipField.classList.add('d-none');
+    amtLabel.textContent = 'Loan / Purchase Amount (₹)';
+  } else if (currentType === 'increase_sip') {
+    loanFields.classList.add('d-none');
+    sipField.classList.remove('d-none');
+    amtLabel.textContent = 'Total SIP Investment per Year (₹)';
+  } else {
+    loanFields.classList.add('d-none');
+    sipField.classList.add('d-none');
+    amtLabel.textContent = 'Investment Amount (₹)';
+  }
+}
+
+function inr(n) {
+  const abs = Math.abs(+n||0);
+  const s = abs>=1e7?`${(abs/1e7).toFixed(2)} Cr`:abs>=1e5?`${(abs/1e5).toFixed(1)} L`:abs>=1e3?`${(abs/1e3).toFixed(1)} K`:`${Math.round(abs)}`;
+  return (n<0?'−':'')+'₹'+s;
+}
+
+let barChart = null;
+async function simulate() {
+  const amount        = +document.getElementById('amount').value;
+  const interest_rate = +document.getElementById('interest_rate').value || 0;
+  const tenure_months = +document.getElementById('tenure').value || 60;
+  const sip_change    = +document.getElementById('sip_change').value || 0;
+
+  if (!amount && currentType !== 'increase_sip') {
+    alert('Please enter an amount.');
+    return;
+  }
+
+  const panel = document.getElementById('results-panel');
+  panel.innerHTML = `<div class="card h-100"><div class="card-body d-flex align-items-center justify-content-center"><div class="spinner-border" style="color:#7c3aed"></div></div></div>`;
+
+  try {
+    const res = await fetch('/api/decision', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: currentType, amount, interest_rate, tenure_months, sip_change }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.errors?.[0]?.msg || 'Simulation failed');
+    renderResults(d);
+  } catch(e) {
+    panel.innerHTML = `<div class="card h-100"><div class="card-body"><div class="alert alert-danger">${e.message}</div></div></div>`;
+  }
+}
+
+function renderResults(d) {
+  const imp  = d.impact;
+  const risk = imp.risk;
+  const riskColor = risk==='high'?'#ef4444':risk==='moderate'?'#f59e0b':'#10b981';
+  const riskLabel = risk==='high'?'High Risk':'moderate'?'Moderate':'Low Risk';
+  const proceedCls = d.proceed ? (risk==='moderate'?'caution-btn':'proceed-btn') : 'stop-btn';
+  const proceedTxt = d.proceed ? (risk==='moderate'?'⚠ Proceed with Caution':'✓ Safe to Proceed') : '✕ Not Recommended';
+
+  const panel = document.getElementById('results-panel');
+  panel.innerHTML = `
+    <div class="card">
+      <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+        <span>Simulation Results</span>
+        <span class="badge" style="background:${riskColor}20;color:${riskColor};border:1px solid ${riskColor}40;font-size:.75rem;padding:6px 12px">
+          ${risk.toUpperCase()} RISK
+        </span>
+      </div>
+      <div class="card-body p-4">
+
+        <!-- Before / After savings rate -->
+        <p class="metric-label mb-2" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:700">Savings Rate Impact</p>
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <div class="compare-box flex-1 text-center">
+            <div class="compare-label">Before</div>
+            <div class="compare-val" style="color:#94a3b8">${imp.savings_rate_before.toFixed(1)}%</div>
+          </div>
+          <div class="compare-arrow">→</div>
+          <div class="compare-box flex-1 text-center">
+            <div class="compare-label">After</div>
+            <div class="compare-val" style="color:${imp.savings_rate_after < imp.savings_rate_before ? '#f87171':'#34d399'}">${imp.savings_rate_after.toFixed(1)}%</div>
+          </div>
+          <div class="compare-box flex-1 text-center">
+            <div class="compare-label">Change</div>
+            <div class="compare-val" style="color:${imp.savings_rate_change<0?'#f87171':'#34d399'}">
+              ${imp.savings_rate_change>=0?'+':''}${imp.savings_rate_change.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div style="height:180px;margin-bottom:20px">
+          <canvas id="sim-chart"></canvas>
+        </div>
+
+        <!-- Other metrics -->
+        <div class="row g-2 mb-4">
+          ${imp.monthly_emi_added > 0 ? `
+          <div class="col-6"><div class="compare-box">
+            <div class="compare-label">New Monthly EMI</div>
+            <div style="font-size:1.2rem;font-weight:800;color:#f87171">${inr(imp.monthly_emi_added)}/mo</div>
+          </div></div>` : ''}
+          ${imp.total_emi_after > 0 ? `
+          <div class="col-6"><div class="compare-box">
+            <div class="compare-label">Total EMI After</div>
+            <div style="font-size:1.2rem;font-weight:800;color:#fbbf24">${inr(imp.total_emi_after)}/mo</div>
+          </div></div>` : ''}
+          <div class="col-6"><div class="compare-box">
+            <div class="compare-label">Net Worth Impact</div>
+            <div style="font-size:1.2rem;font-weight:800;color:${imp.net_worth_change>=0?'#34d399':'#f87171'}">
+              ${imp.net_worth_change>=0?'+':''}${inr(imp.net_worth_change)}
+            </div>
+          </div></div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="result-card ${risk==='high'?'danger':risk==='moderate'?'warning':'success'} mb-4">
+          <div style="font-weight:700;font-size:.875rem;margin-bottom:6px;color:#f1f5f9">
+            ${risk==='high'?'⚠ Analyst Caution':risk==='moderate'?'ℹ Consider carefully':'✓ Recommendation'}
+          </div>
+          <div style="font-size:.875rem;color:#94a3b8;line-height:1.6">${d.recommendation}</div>
+        </div>
+
+        <button class="${proceedCls}" style="width:100%;border-radius:10px;font-weight:700;padding:12px">
+          ${proceedTxt}
+        </button>
+      </div>
+    </div>`;
+
+  // Bar chart — before vs after savings rate
+  if (barChart) { barChart.destroy(); }
+  barChart = new Chart(document.getElementById('sim-chart'), {
+    type: 'bar',
+    data: {
+      labels: ['Savings Rate Before', 'Savings Rate After'],
+      datasets: [{
+        data: [imp.savings_rate_before, imp.savings_rate_after],
+        backgroundColor: [
+          imp.savings_rate_before > 20 ? '#10b981' : imp.savings_rate_before > 10 ? '#f59e0b' : '#ef4444',
+          imp.savings_rate_after  > 20 ? '#10b981' : imp.savings_rate_after  > 10 ? '#f59e0b' : '#ef4444',
+        ],
+        borderRadius: 6,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{ display:false }, tooltip:{ callbacks:{ label: ctx=>`${ctx.raw.toFixed(1)}%` }}},
+      scales: {
+        x:{ grid:{ display:false }, ticks:{ color:'#64748b' }},
+        y:{ grid:{ color:'#1e293b' }, ticks:{ color:'#64748b', callback: v=>`${v}%` }, max: Math.max(40, imp.savings_rate_before+10) },
+      },
+    },
+  });
+}
+</script>
+</body>
+</html>

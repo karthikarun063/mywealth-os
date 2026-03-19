@@ -2,31 +2,44 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
+// ── Neon + Vercel serverless optimised connection ─────────────────────────────
+// Neon uses PgBouncer pooler (-pooler in hostname) — keep pool small.
+// SSL must ALWAYS be true for Neon (not just in production).
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  ssl: process.env.DATABASE_URL?.includes('neon.tech') ||
+       process.env.DATABASE_URL?.includes('sslmode')
+    ? { rejectUnauthorized: false }
+    : false,
+  max:                    2,    // keep tiny for serverless
+  min:                    0,
+  idleTimeoutMillis:      10000,
+  connectionTimeoutMillis:5000,
+  allowExitOnIdle:        true, // let process exit cleanly in serverless
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error', err);
+  console.error('[DB] Pool error:', err.message);
 });
 
 /**
- * Run a parameterised query.
- * @param {string} text  - SQL query string with $1, $2 placeholders
- * @param {Array}  params - Query parameters
+ * Execute a parameterised SQL query.
+ * Automatically logs slow queries (>200ms) in development.
  */
-async function query(text, params) {
+async function query(text, params = []) {
   const start = Date.now();
-  const res   = await pool.query(text, params);
-  const dur   = Date.now() - start;
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[DB] ${text.slice(0, 60)}… | ${dur}ms | rows: ${res.rowCount}`);
+  try {
+    const res = await pool.query(text, params);
+    const ms  = Date.now() - start;
+    if (process.env.NODE_ENV !== 'production' || ms > 200) {
+      console.log(`[DB] ${ms}ms | ${text.slice(0, 80).replace(/\s+/g,' ')}`);
+    }
+    return res;
+  } catch (err) {
+    console.error('[DB] Query error:', err.message, '\nSQL:', text.slice(0, 200));
+    throw err;
   }
-  return res;
 }
 
 module.exports = { pool, query };

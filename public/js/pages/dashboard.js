@@ -110,7 +110,119 @@ Router.register('dashboard', async () => {
   } catch (err) {
     Toast.show('Failed to load dashboard: ' + err.message, 'error');
   }
+
+  // AI Report quick card
+  renderReportCard();
+}
+
+async function renderReportCard() {
+  const container = document.getElementById('page-container');
+  const div = document.createElement('div');
+  div.id = 'rp-dash-card';
+  div.className = 'card';
+  div.style.cssText = 'margin-top:14px;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px';
+  div.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="section-title" style="margin-bottom:0">📄 AI Financial Report</div>
+      <a href="/report.html" style="font-size:11px;color:#a78bfa;text-decoration:none;font-weight:600">View Report →</a>
+    </div>
+    <div id="rp-dash-content" style="color:var(--text3);font-size:13px">Loading report preview…</div>`;
+  container.appendChild(div);
+
+  try {
+    const d = await fetch('/api/report-data').then(r => r.json());
+    const scoreColor = d.score >= 70 ? '#10b981' : d.score >= 40 ? '#f59e0b' : '#ef4444';
+    const ai = d.aiGuidance || {};
+    const firstSuggestion = ai.suggestions?.[0] || 'Track expenses and grow savings rate.';
+
+    document.getElementById('rp-dash-content').innerHTML = `
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center">
+        <div style="text-align:center;background:#0a0f1e;border:1px solid #1e293b;border-radius:12px;padding:14px 20px">
+          <div style="font-size:40px;font-weight:900;color:${scoreColor};font-variant-numeric:tabular-nums;line-height:1">${d.score}</div>
+          <div style="font-size:10px;color:var(--text3)">/ 100</div>
+          <div style="margin-top:6px;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;
+            background:${scoreColor}18;color:${scoreColor};border:1px solid ${scoreColor}40;display:inline-block">
+            ${d.riskLevel} Risk
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.5">${firstSuggestion}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="/report.html" style="font-size:11px;background:#7c3aed;color:#fff;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:600">
+              View Full Report →
+            </a>
+            <button onclick="dashDownloadPDF()" style="font-size:11px;background:transparent;border:1px solid #334155;color:#94a3b8;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600">
+              ⬇ Download PDF
+            </button>
+          </div>
+        </div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('rp-dash-content').innerHTML =
+      '<span style="color:#64748b">Report unavailable — <a href="/report.html" style="color:#a78bfa">open report page</a></span>';
+  }
 });
+
+  // ── Financial Strategy preview ─────────────────────────────────────────
+  renderStrategyPreview();
+}
+
+async function renderStrategyPreview() {
+  // Append strategy card to page
+  const container = document.getElementById('page-container');
+  const stratDiv = document.createElement('div');
+  stratDiv.id = 'strategy-section';
+  stratDiv.innerHTML = `
+    <div class="card" style="margin-top:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">🧠 Your Financial Strategy</div>
+        <a href="/strategy.html" style="font-size:11px;color:#a78bfa;text-decoration:none;font-weight:600">Full Report →</a>
+      </div>
+      <div id="strategy-loading" style="text-align:center;padding:20px;color:var(--text3)">
+        Generating strategy…
+      </div>
+      <div id="strategy-content" style="display:none"></div>
+    </div>`;
+  container.appendChild(stratDiv);
+
+  try {
+    const d = await fetch('/api/strategy-report').then(r => r.json());
+    document.getElementById('strategy-loading').style.display = 'none';
+    const sc = document.getElementById('strategy-content');
+    sc.style.display = 'block';
+
+    const scoreColor = d.score >= 75 ? '#10b981' : d.score >= 50 ? '#f59e0b' : '#ef4444';
+    const riskColor  = { Low:'#10b981', Moderate:'#f59e0b', High:'#f97316', Critical:'#ef4444' }[d.risk_level] || '#f59e0b';
+
+    sc.innerHTML = `
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start">
+        <div style="text-align:center">
+          <div style="font-size:48px;font-weight:900;color:${scoreColor};font-variant-numeric:tabular-nums;line-height:1">${d.score}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">/ 100</div>
+          <div style="margin-top:8px;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block;
+            background:${riskColor}20;color:${riskColor};border:1px solid ${riskColor}40">${d.risk_level} Risk</div>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">
+            Top 3 Actions
+          </div>
+          ${d.recommended_actions.slice(0,3).map((a,i) => `
+            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
+              <div style="width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-weight:800;
+                display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${a.priority}</div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:#f1f5f9">${a.action}</div>
+                <div style="font-size:10px;color:var(--text3);margin-top:1px">${a.impact}</div>
+              </div>
+            </div>`).join('')}
+          <a href="/strategy.html" style="display:inline-block;margin-top:4px;font-size:11px;background:#7c3aed;color:#fff;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:600">
+            View Full Strategy →
+          </a>
+        </div>
+      </div>`;
+  } catch(e) {
+    document.getElementById('strategy-loading').textContent = 'Strategy unavailable';
+  }
 
 function renderBudgetStatus(budgets) {
   const el = document.getElementById('budget-status-content');

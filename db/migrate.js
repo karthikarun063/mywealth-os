@@ -5,35 +5,28 @@ const path = require('path');
 const { pool } = require('./connection');
 
 async function migrate() {
-  console.log('⚙  Running database migration…');
-
-  // Run base schema
-  const schemaSql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-
-  // Run budget migration
-  const migrationSql = fs.readFileSync(
-    path.join(__dirname, 'migrations', '001_budget_planner.sql'), 'utf8'
-  );
-
-  try {
-    await pool.query(schemaSql);
-    console.log('✓  Base schema applied.');
-
-    await pool.query(migrationSql);
-    console.log('✓  Budget planner migration applied.');
-
-    console.log('✅ Migration complete.');
-  } catch (err) {
-    // If tables already exist, that's fine
-    if (err.code === '42P07' || err.message.includes('already exists')) {
-      console.log('ℹ  Schema already exists — skipping.');
-    } else {
-      console.error('✕  Migration error:', err.message);
-      process.exit(1);
+  console.log('⚙  Running database migrations…');
+  const migrations = [
+    'schema.sql',
+    'migrations/001_budget_planner.sql',
+    'migrations/002_financial_reports.sql',
+  ];
+  for (const file of migrations) {
+    const sql = fs.readFileSync(path.join(__dirname, file), 'utf8');
+    try {
+      await pool.query(sql);
+      console.log(`✓  ${file}`);
+    } catch (err) {
+      if (err.message.includes('already exists') || err.code === '42P07' || err.code === '42701') {
+        console.log(`ℹ  ${file} — already applied`);
+      } else {
+        console.error(`✕  ${file}: ${err.message}`);
+        process.exit(1);
+      }
     }
-  } finally {
-    await pool.end();
   }
+  console.log('\n✅ All migrations complete.');
+  await pool.end();
 }
 
 migrate();
