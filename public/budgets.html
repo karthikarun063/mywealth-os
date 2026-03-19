@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="theme-color" content="#7c3aed"/>
+  <title>Budget Planner — MyWealth OS</title>
+  <link rel="stylesheet" href="/css/main.css"/>
+  <link rel="stylesheet" href="/css/budgets.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="bp-standalone">
+
+<!-- ── Top bar ──────────────────────────────────────────────────────────── -->
+<header class="bp-topbar">
+  <a href="/" class="bp-logo">
+    <div class="logo-icon">₹</div>
+    <span>MyWealth OS</span>
+  </a>
+  <h1 class="bp-topbar-title">📊 Budget Planner</h1>
+  <div class="bp-topbar-actions">
+    <select id="bp-month" class="form-select" style="width:auto">
+      <!-- filled by JS -->
+    </select>
+    <button class="btn btn-primary" id="btn-add-budget" onclick="BP.openAdd()">
+      + Set Budget
+    </button>
+    <a href="/" class="btn btn-outline">← Dashboard</a>
+  </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<main class="bp-main">
+
+  <!-- KPI strip -->
+  <section class="bp-kpi-strip" id="bp-kpis">
+    <div class="bp-kpi bp-kpi--skeleton"></div>
+    <div class="bp-kpi bp-kpi--skeleton"></div>
+    <div class="bp-kpi bp-kpi--skeleton"></div>
+    <div class="bp-kpi bp-kpi--skeleton"></div>
+    <div class="bp-kpi bp-kpi--skeleton"></div>
+  </section>
+
+  <!-- Dual chart row -->
+  <section class="bp-charts-row">
+    <div class="card bp-chart-card">
+      <div class="section-title">Budget vs Actual</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="bp-bar"></canvas></div>
+    </div>
+    <div class="card bp-chart-card">
+      <div class="section-title">Spending Utilisation</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="bp-donut"></canvas></div>
+    </div>
+    <div class="card bp-chart-card">
+      <div class="section-title">Monthly Trend</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="bp-trend"></canvas></div>
+    </div>
+  </section>
+
+  <!-- Table card -->
+  <section class="card" id="bp-table-card" style="padding:0;overflow:hidden">
+
+    <!-- Table toolbar -->
+    <div class="bp-table-toolbar">
+      <div class="bp-toolbar-left">
+        <div id="bp-status-msg"></div>
+        <div class="filter-chips" id="bp-filters" style="margin-bottom:0">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="exceeded">Over Budget</button>
+          <button class="chip" data-filter="warning">Near Limit</button>
+          <button class="chip" data-filter="healthy">Healthy</button>
+        </div>
+      </div>
+      <div class="bp-toolbar-right">
+        <input type="text" class="form-input" id="bp-search"
+          placeholder="Search category…" style="width:180px;padding:6px 10px;font-size:12px"
+          oninput="BP.search(this.value)"/>
+      </div>
+    </div>
+
+    <!-- Comparison table -->
+    <div class="table-wrap">
+      <table id="bp-table">
+        <thead>
+          <tr>
+            <th class="sortable" data-col="category" onclick="BP.sort('category')">
+              Category <span class="sort-icon">↕</span>
+            </th>
+            <th class="sortable" data-col="budget" onclick="BP.sort('budget')">
+              Monthly Budget <span class="sort-icon">↕</span>
+            </th>
+            <th class="sortable" data-col="actual" onclick="BP.sort('actual')">
+              Actual Spending <span class="sort-icon">↕</span>
+            </th>
+            <th class="sortable" data-col="diff" onclick="BP.sort('diff')">
+              Difference <span class="sort-icon">↕</span>
+            </th>
+            <th>Progress</th>
+            <th class="sortable" data-col="pct" onclick="BP.sort('pct')">
+              % Used <span class="sort-icon">↕</span>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bp-tbody">
+          <tr><td colspan="7" class="table-empty">Loading…</td></tr>
+        </tbody>
+        <tfoot id="bp-tfoot"></tfoot>
+      </table>
+    </div>
+
+    <!-- Unbudgeted section -->
+    <div id="bp-unbudgeted"></div>
+  </section>
+
+  <!-- Historical insight panel -->
+  <section class="card" id="bp-insights">
+    <div class="section-title">💡 Budget Insights</div>
+    <div id="bp-insights-content" style="color:var(--text3);font-size:13px">Analysing your spending patterns…</div>
+  </section>
+
+</main>
+
+<!-- ── Modal ─────────────────────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title"></h3>
+      <button class="modal-close" onclick="Modal.close()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────────────────────────── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── Scripts ───────────────────────────────────────────────────────────── -->
+<script src="/js/lib/utils.js"></script>
+<script src="/js/lib/api.js"></script>
+<script src="/js/lib/ui.js"></script>
+<script src="/js/lib/charts.js"></script>
+<script src="/js/budget-planner.js"></script>
+</body>
+</html>

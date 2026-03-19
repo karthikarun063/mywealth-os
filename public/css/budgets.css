@@ -1,0 +1,206 @@
+/* ── Budget Planner — Standalone Page Styles ────────────────── */
+
+body.bp-standalone {
+  background: var(--bg);
+  min-height: 100vh;
+  display:    flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ────────────────────────────────────────────────── */
+.bp-topbar {
+  position:    sticky;
+  top:         0;
+  z-index:     50;
+  background:  var(--bg1);
+  border-bottom: 1px solid var(--border);
+  padding:     0 24px;
+  height:      60px;
+  display:     flex;
+  align-items: center;
+  gap:         16px;
+}
+
+.bp-logo {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  text-decoration: none;
+  color:       #f1f5f9;
+  font-weight: 700;
+  font-size:   14px;
+  flex-shrink: 0;
+}
+.bp-logo:hover { color: #a78bfa; }
+
+.bp-topbar-title {
+  font-size:   16px;
+  font-weight: 700;
+  color:       #f1f5f9;
+  flex:        1;
+  text-align:  center;
+}
+
+.bp-topbar-actions {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  flex-shrink: 0;
+  flex-wrap:   wrap;
+}
+
+/* ── Main layout ────────────────────────────────────────────── */
+.bp-main {
+  flex:    1;
+  padding: 24px;
+  max-width:  1280px;
+  margin:     0 auto;
+  width:      100%;
+  display:    flex;
+  flex-direction: column;
+  gap:        16px;
+}
+
+/* ── KPI strip ──────────────────────────────────────────────── */
+.bp-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap:     12px;
+}
+
+.bp-kpi {
+  background:    var(--bg1);
+  border:        1px solid var(--border);
+  border-radius: var(--r);
+  padding:       16px;
+}
+
+.bp-kpi--skeleton {
+  height:    80px;
+  animation: pulse 1.5s infinite;
+}
+
+.bp-kpi-label {
+  font-size:       9px;
+  color:           var(--text3);
+  text-transform:  uppercase;
+  letter-spacing:  .1em;
+  font-weight:     700;
+}
+
+.bp-kpi-value {
+  font-size:           22px;
+  font-weight:         700;
+  margin-top:          6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-kpi-sub {
+  font-size:  11px;
+  color:      var(--text3);
+  margin-top: 3px;
+}
+
+.bp-kpi-bar {
+  margin-top: 8px;
+}
+
+/* ── Charts row ─────────────────────────────────────────────── */
+.bp-charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap:     12px;
+}
+
+.bp-chart-card { flex: 1; }
+
+/* ── Table toolbar ──────────────────────────────────────────── */
+.bp-table-toolbar {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         12px 16px;
+  border-bottom:   1px solid var(--border);
+  flex-wrap:       wrap;
+  gap:             10px;
+}
+
+.bp-toolbar-left {
+  display:     flex;
+  align-items: center;
+  gap:         12px;
+  flex-wrap:   wrap;
+}
+
+#bp-status-msg {
+  font-size:  12px;
+  color:      var(--text3);
+  min-width:  120px;
+}
+
+/* ── Table ──────────────────────────────────────────────────── */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+.sort-icon { font-size: 10px; opacity: .5; }
+th.sorted-asc  .sort-icon::after { content: ' ↑'; opacity: 1; }
+th.sorted-desc .sort-icon::after { content: ' ↓'; opacity: 1; }
+
+tr.row-exceeded td { background: rgba(244, 63, 94, .04) !important; }
+tr.row-warning  td { background: rgba(245,158, 11, .04) !important; }
+
+.bp-progress-wrap {
+  display:     flex;
+  align-items: center;
+  gap:         8px;
+  min-width:   120px;
+}
+
+/* ── Unbudgeted zone ────────────────────────────────────────── */
+.bp-unbudgeted-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap:     8px;
+}
+
+.bp-unbudgeted-item {
+  background:    rgba(245,158,11,.06);
+  border:        1px solid rgba(245,158,11,.2);
+  border-radius: 10px;
+  padding:       12px;
+  display:       flex;
+  justify-content: space-between;
+  align-items:   center;
+}
+
+/* ── Insight panel ──────────────────────────────────────────── */
+.bp-insight-item {
+  display:       flex;
+  align-items:   flex-start;
+  gap:           10px;
+  padding:       10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.bp-insight-item:last-child { border-bottom: none; }
+.bp-insight-icon { font-size: 18px; flex-shrink: 0; }
+.bp-insight-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+.bp-insight-text strong { color: #f1f5f9; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .bp-charts-row { grid-template-columns: 1fr 1fr; }
+  .bp-charts-row .bp-chart-card:first-child { grid-column: 1 / -1; }
+}
+
+@media (max-width: 780px) {
+  .bp-topbar-title { display: none; }
+  .bp-kpi-strip    { grid-template-columns: 1fr 1fr; }
+  .bp-charts-row   { grid-template-columns: 1fr; }
+  .bp-table-toolbar { flex-direction: column; align-items: flex-start; }
+  #bp-search       { width: 100% !important; }
+}
+
+@media (max-width: 480px) {
+  .bp-main        { padding: 12px; }
+  .bp-kpi-strip   { grid-template-columns: 1fr; }
+  .bp-topbar      { padding: 0 12px; gap: 8px; }
+}

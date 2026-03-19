@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <meta name="theme-color" content="#7c3aed"/>
+  <title>MyWealth OS</title>
+  <link rel="stylesheet" href="/css/main.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="logo" onclick="Router.go('dashboard')">
+      <div class="logo-icon">₹</div>
+      <div><div class="logo-text">MyWealth OS</div><div class="logo-sub">Node · Express · PostgreSQL</div></div>
+    </div>
+    <div class="nw-strip">
+      <div class="nw-label">Net Worth</div>
+      <div class="nw-val" id="sb-nw">—</div>
+      <div class="nw-sr" id="sb-sr">—</div>
+    </div>
+    <nav id="main-nav">
+      <div class="nav-section">
+        <div class="nav-title">Overview</div>
+        <button class="nav-item" data-page="dashboard"><span>⬡</span>Dashboard</button>
+        <button class="nav-item" data-page="insights"><span>✦</span>AI Insights</button>
+        <button class="nav-item" data-page="analytics"><span>△</span>Analytics</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-title">Wealth</div>
+        <button class="nav-item" data-page="assets"><span>◈</span>Assets</button>
+        <button class="nav-item" data-page="liabilities"><span>◇</span>Liabilities</button>
+        <button class="nav-item" data-page="transactions"><span>⟳</span>Cash Flow</button>
+      </div>
+      <div class="nav-section">
+        <div class="nav-title">Planning</div>
+        <button class="nav-item" data-page="goals"><span>◎</span>Goals</button>
+        <button class="nav-item" data-page="budget"><span>▦</span>Budget</button>
+        <button class="nav-item" data-page="fire"><span>◉</span>FIRE Calc</button>
+        <button class="nav-item" data-page="portfolio"><span>◑</span>Portfolio</button>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-pill">
+        <div class="user-avatar">D</div>
+        <div><div class="user-name">Demo User</div><div class="user-sub">Privacy-first · Local DB</div></div>
+      </div>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-container" id="page-container">
+      <div class="loading-screen" id="loading-screen">
+        <div class="loading-icon">₹</div>
+        <p>Loading MyWealth OS…</p>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modal-title"></h3>
+      <button class="modal-close" onclick="Modal.close()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+<div class="toast-container" id="toast-container"></div>
+<nav class="mobile-nav">
+  <button onclick="Router.go('dashboard')"><span>⬡</span><small>Home</small></button>
+  <button onclick="Router.go('assets')"><span>◈</span><small>Assets</small></button>
+  <button onclick="Router.go('transactions')"><span>⟳</span><small>Cash</small></button>
+  <button onclick="Router.go('goals')"><span>◎</span><small>Goals</small></button>
+  <button onclick="Router.go('insights')"><span>✦</span><small>Insights</small></button>
+</nav>
+<script src="/js/lib/utils.js"></script>
+<script src="/js/lib/api.js"></script>
+<script src="/js/lib/ui.js"></script>
+<script src="/js/lib/charts.js"></script>
+<script src="/js/pages/dashboard.js"></script>
+<script src="/js/pages/assets.js"></script>
+<script src="/js/pages/liabilities.js"></script>
+<script src="/js/pages/transactions.js"></script>
+<script src="/js/pages/goals.js"></script>
+<script src="/js/pages/budget.js"></script>
+<script src="/js/pages/fire.js"></script>
+<script src="/js/pages/analytics.js"></script>
+<script src="/js/pages/insights.js"></script>
+<script src="/js/pages/portfolio.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>
