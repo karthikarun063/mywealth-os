@@ -1,4 +1,6 @@
 'use strict';
+
+// ── Dashboard page ────────────────────────────────────────────────────────────
 Router.register('dashboard', async () => {
   const c = document.getElementById('page-container');
   c.innerHTML = `
@@ -6,12 +8,10 @@ Router.register('dashboard', async () => {
       <div><h1 class="page-title">Dashboard</h1><p class="page-sub">Your wealth at a glance</p></div>
     </div>
 
-    <!-- KPI row -->
     <div class="grid-4" id="dash-kpis" style="margin-bottom:14px">
       ${Array(4).fill(`<div class="stat-card"><div style="height:50px;background:var(--bg3);border-radius:8px;animation:pulse 1.5s infinite"></div></div>`).join('')}
     </div>
 
-    <!-- Charts row 1 -->
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px">
       <div class="card">
         <div class="section-title">Net Worth Trend</div>
@@ -23,20 +23,18 @@ Router.register('dashboard', async () => {
       </div>
     </div>
 
-    <!-- Charts row 2 -->
     <div class="grid-2" style="margin-bottom:12px">
       <div class="card">
         <div class="section-title">Income vs Expenses (6 months)</div>
         <div class="chart-wrap" style="height:180px"><canvas id="cashflow-chart"></canvas></div>
       </div>
-      <div class="card" id="top-exp-card">
+      <div class="card">
         <div class="section-title">Top Expenses This Month</div>
         <div class="chart-wrap" style="height:180px"><canvas id="top-exp-chart"></canvas></div>
       </div>
     </div>
 
-    <!-- Budget Status card -->
-    <div class="card" id="budget-status-card">
+    <div class="card" id="budget-status-card" style="margin-bottom:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div class="section-title" style="margin-bottom:0">📊 Budget Status</div>
         <button class="btn btn-ghost btn-sm" onclick="Router.go('budget')" style="font-size:11px">View All →</button>
@@ -45,8 +43,29 @@ Router.register('dashboard', async () => {
         <span style="color:var(--text3);font-size:13px">Loading budget status…</span>
       </div>
     </div>
+
+    <div class="card" id="strategy-card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">🧠 Your Financial Strategy</div>
+        <a href="/strategy.html" style="font-size:11px;color:#a78bfa;text-decoration:none;font-weight:600">Full Report →</a>
+      </div>
+      <div id="strategy-content">
+        <div style="text-align:center;padding:20px;color:var(--text3)">Generating strategy…</div>
+      </div>
+    </div>
+
+    <div class="card" id="report-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:0">📄 AI Financial Report</div>
+        <a href="/report.html" style="font-size:11px;color:#a78bfa;text-decoration:none;font-weight:600">View Report →</a>
+      </div>
+      <div id="report-content">
+        <div style="text-align:center;padding:12px;color:var(--text3);font-size:13px">Loading report preview…</div>
+      </div>
+    </div>
   `;
 
+  // Load main dashboard data
   try {
     const [dash, snaps, monthly, cats] = await Promise.all([
       API.dashboard(),
@@ -55,7 +74,7 @@ Router.register('dashboard', async () => {
       API.txCategoryTotals(currentMonth()),
     ]);
 
-    // ── KPIs ──────────────────────────────────────────────────────────────
+    // KPIs
     const nw = +dash.netWorth;
     const sr = +dash.savingsRate;
     document.getElementById('dash-kpis').innerHTML = `
@@ -80,7 +99,7 @@ Router.register('dashboard', async () => {
         <div class="stat-sub">${inr(dash.income)} income this month</div>
       </div>`;
 
-    // ── Charts ─────────────────────────────────────────────────────────────
+    // Charts
     const snapsSorted = [...snaps].sort((a,b) => a.month.localeCompare(b.month));
     Charts.area('nw-chart',
       snapsSorted.map(s => monthLabel(s.month)),
@@ -104,109 +123,90 @@ Router.register('dashboard', async () => {
       cats.map(c => +c.total),
       cats.map(c => ASSET_COLORS[c.category] || '#6366f1'));
 
-    // ── Budget Status card ─────────────────────────────────────────────────
     renderBudgetStatus(dash.budgetStatus || []);
 
   } catch (err) {
     Toast.show('Failed to load dashboard: ' + err.message, 'error');
   }
 
-  // AI Report quick card
-  renderReportCard();
-}
+  // Load strategy card (non-blocking)
+  loadStrategyCard();
 
-async function renderReportCard() {
-  const container = document.getElementById('page-container');
-  const div = document.createElement('div');
-  div.id = 'rp-dash-card';
-  div.className = 'card';
-  div.style.cssText = 'margin-top:14px;background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:18px';
-  div.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="section-title" style="margin-bottom:0">📄 AI Financial Report</div>
-      <a href="/report.html" style="font-size:11px;color:#a78bfa;text-decoration:none;font-weight:600">View Report →</a>
-    </div>
-    <div id="rp-dash-content" style="color:var(--text3);font-size:13px">Loading report preview…</div>`;
-  container.appendChild(div);
-
-  try {
-    const d = await fetch('/api/report-data').then(r => r.json());
-    const scoreColor = d.score >= 70 ? '#10b981' : d.score >= 40 ? '#f59e0b' : '#ef4444';
-    const ai = d.aiGuidance || {};
-    const firstSuggestion = ai.suggestions?.[0] || 'Track expenses and grow savings rate.';
-
-    document.getElementById('rp-dash-content').innerHTML = `
-      <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center">
-        <div style="text-align:center;background:#0a0f1e;border:1px solid #1e293b;border-radius:12px;padding:14px 20px">
-          <div style="font-size:40px;font-weight:900;color:${scoreColor};font-variant-numeric:tabular-nums;line-height:1">${d.score}</div>
-          <div style="font-size:10px;color:var(--text3)">/ 100</div>
-          <div style="margin-top:6px;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;
-            background:${scoreColor}18;color:${scoreColor};border:1px solid ${scoreColor}40;display:inline-block">
-            ${d.riskLevel} Risk
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.5">${firstSuggestion}</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <a href="/report.html" style="font-size:11px;background:#7c3aed;color:#fff;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:600">
-              View Full Report →
-            </a>
-            <button onclick="dashDownloadPDF()" style="font-size:11px;background:transparent;border:1px solid #334155;color:#94a3b8;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600">
-              ⬇ Download PDF
-            </button>
-          </div>
-        </div>
-      </div>`;
-  } catch(e) {
-    document.getElementById('rp-dash-content').innerHTML =
-      '<span style="color:#64748b">Report unavailable — <a href="/report.html" style="color:#a78bfa">open report page</a></span>';
-  }
+  // Load AI report card (non-blocking)
+  loadReportCard();
 });
 
-  // ── Financial Strategy preview ─────────────────────────────────────────
-  renderStrategyPreview();
+// ── Budget Status ─────────────────────────────────────────────────────────────
+function renderBudgetStatus(budgets) {
+  const el = document.getElementById('budget-status-content');
+  if (!el) return;
+
+  if (!budgets.length) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:16px 0">
+        <p style="color:var(--text3);font-size:13px;margin-bottom:10px">No budgets set for this month.</p>
+        <button class="btn btn-outline btn-sm" onclick="Router.go('budget')">Set Up Budgets →</button>
+      </div>`;
+    return;
+  }
+
+  const overCount = budgets.filter(b => parseFloat(b.percentage_used) >= 100).length;
+  const warnCount = budgets.filter(b => { const p = parseFloat(b.percentage_used); return p >= 80 && p < 100; }).length;
+
+  el.innerHTML = `
+    <div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap">
+      ${overCount ? `<span class="badge badge-danger">${overCount} over budget</span>` : ''}
+      ${warnCount ? `<span class="badge badge-warning">${warnCount} near limit</span>` : ''}
+      ${!overCount && !warnCount ? `<span class="badge badge-success">All budgets on track 🎉</span>` : ''}
+    </div>
+    ${budgets.map(b => {
+      const pct   = parseFloat(b.percentage_used) || 0;
+      const over  = pct >= 100;
+      const warn  = pct >= 80 && pct < 100;
+      const color = over ? '#f43f5e' : warn ? '#f59e0b' : '#10b981';
+      const badge = over
+        ? `<span class="badge badge-danger">Over</span>`
+        : warn
+        ? `<span class="badge badge-warning">${pct.toFixed(0)}%</span>`
+        : `<span class="badge badge-success">${pct.toFixed(0)}%</span>`;
+      return `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="width:110px;font-size:12px;color:#f1f5f9;text-transform:capitalize;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${b.category}
+          </div>
+          <div style="flex:1">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
+              <span>${inr(b.actual_spending)} of ${inr(b.budget)}</span>
+              <span style="color:${color};font-weight:600">${pct.toFixed(0)}% used</span>
+            </div>
+            <div class="progress-bg">
+              <div class="progress-bar" style="width:${Math.min(100,pct)}%;background:${color}"></div>
+            </div>
+          </div>
+          ${badge}
+        </div>`;
+    }).join('')}`;
 }
 
-async function renderStrategyPreview() {
-  // Append strategy card to page
-  const container = document.getElementById('page-container');
-  const stratDiv = document.createElement('div');
-  stratDiv.id = 'strategy-section';
-  stratDiv.innerHTML = `
-    <div class="card" style="margin-top:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div class="section-title" style="margin-bottom:0">🧠 Your Financial Strategy</div>
-        <a href="/strategy.html" style="font-size:11px;color:#a78bfa;text-decoration:none;font-weight:600">Full Report →</a>
-      </div>
-      <div id="strategy-loading" style="text-align:center;padding:20px;color:var(--text3)">
-        Generating strategy…
-      </div>
-      <div id="strategy-content" style="display:none"></div>
-    </div>`;
-  container.appendChild(stratDiv);
-
+// ── Strategy Card ─────────────────────────────────────────────────────────────
+async function loadStrategyCard() {
+  const el = document.getElementById('strategy-content');
+  if (!el) return;
   try {
     const d = await fetch('/api/strategy-report').then(r => r.json());
-    document.getElementById('strategy-loading').style.display = 'none';
-    const sc = document.getElementById('strategy-content');
-    sc.style.display = 'block';
-
     const scoreColor = d.score >= 75 ? '#10b981' : d.score >= 50 ? '#f59e0b' : '#ef4444';
     const riskColor  = { Low:'#10b981', Moderate:'#f59e0b', High:'#f97316', Critical:'#ef4444' }[d.risk_level] || '#f59e0b';
-
-    sc.innerHTML = `
+    el.innerHTML = `
       <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start">
         <div style="text-align:center">
-          <div style="font-size:48px;font-weight:900;color:${scoreColor};font-variant-numeric:tabular-nums;line-height:1">${d.score}</div>
+          <div style="font-size:48px;font-weight:900;color:${scoreColor};line-height:1">${d.score}</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">/ 100</div>
           <div style="margin-top:8px;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block;
             background:${riskColor}20;color:${riskColor};border:1px solid ${riskColor}40">${d.risk_level} Risk</div>
         </div>
         <div>
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">
-            Top 3 Actions
-          </div>
-          ${d.recommended_actions.slice(0,3).map((a,i) => `
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px">Top 3 Actions</div>
+          ${(d.recommended_actions || []).slice(0,3).map(a => `
             <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px">
               <div style="width:22px;height:22px;border-radius:50%;background:#7c3aed;color:#fff;font-weight:800;
                 display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${a.priority}</div>
@@ -221,59 +221,41 @@ async function renderStrategyPreview() {
         </div>
       </div>`;
   } catch(e) {
-    document.getElementById('strategy-loading').textContent = 'Strategy unavailable';
+    el.innerHTML = `<span style="color:var(--text3);font-size:13px">Strategy unavailable — <a href="/strategy.html" style="color:#a78bfa">open strategy page</a></span>`;
   }
+}
 
-function renderBudgetStatus(budgets) {
-  const el = document.getElementById('budget-status-content');
+// ── AI Report Card ────────────────────────────────────────────────────────────
+async function loadReportCard() {
+  const el = document.getElementById('report-content');
   if (!el) return;
-
-  if (!budgets.length) {
+  try {
+    const d = await fetch('/api/report-data').then(r => r.json());
+    const scoreColor = d.score >= 70 ? '#10b981' : d.score >= 40 ? '#f59e0b' : '#ef4444';
+    const suggestion = d.aiGuidance?.suggestions?.[0] || 'Track expenses and grow your savings rate.';
     el.innerHTML = `
-      <div style="text-align:center;padding:16px 0">
-        <p style="color:var(--text3);font-size:13px;margin-bottom:10px">No budgets set for this month.</p>
-        <button class="btn btn-outline btn-sm" onclick="Router.go('budget')">Set Up Budgets →</button>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center">
+        <div style="text-align:center;background:#0a0f1e;border:1px solid #1e293b;border-radius:12px;padding:14px 20px">
+          <div style="font-size:40px;font-weight:900;color:${scoreColor};line-height:1">${d.score}</div>
+          <div style="font-size:10px;color:var(--text3)">/ 100</div>
+          <div style="margin-top:6px;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;
+            background:${scoreColor}18;color:${scoreColor};border:1px solid ${scoreColor}40;display:inline-block">
+            ${d.riskLevel} Risk
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:8px;line-height:1.5">${suggestion}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="/report.html" style="font-size:11px;background:#7c3aed;color:#fff;padding:6px 14px;border-radius:8px;text-decoration:none;font-weight:600">
+              View Full Report →
+            </a>
+            <button onclick="dashDownloadPDF()" style="font-size:11px;background:transparent;border:1px solid #334155;color:#94a3b8;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600">
+              ⬇ Download PDF
+            </button>
+          </div>
+        </div>
       </div>`;
-    return;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--text3);font-size:13px">Report unavailable — <a href="/report.html" style="color:#a78bfa">open report page</a></span>`;
   }
-
-  const rows = budgets.map(b => {
-    const pct    = parseFloat(b.percentage_used) || 0;
-    const over   = pct >= 100;
-    const warn   = pct >= 80 && pct < 100;
-    const color  = over ? '#f43f5e' : warn ? '#f59e0b' : '#10b981';
-    const badge  = over
-      ? `<span class="badge badge-danger">Over</span>`
-      : warn
-      ? `<span class="badge badge-warning">${pct.toFixed(0)}%</span>`
-      : `<span class="badge badge-success">${pct.toFixed(0)}%</span>`;
-
-    return `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <div style="width:110px;font-size:12px;color:#f1f5f9;text-transform:capitalize;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${b.category}
-        </div>
-        <div style="flex:1">
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:3px">
-            <span>${inr(b.actual_spending)} of ${inr(b.budget)}</span>
-            <span style="color:${color};font-weight:600">${pct.toFixed(0)}% used</span>
-          </div>
-          <div class="progress-bg">
-            <div class="progress-bar" style="width:${Math.min(100,pct)}%;background:${color}"></div>
-          </div>
-        </div>
-        ${badge}
-      </div>`;
-  });
-
-  const overCount = budgets.filter(b => parseFloat(b.percentage_used) >= 100).length;
-  const warnCount = budgets.filter(b => { const p = parseFloat(b.percentage_used); return p >= 80 && p < 100; }).length;
-
-  el.innerHTML = `
-    <div style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap">
-      ${overCount  ? `<span class="badge badge-danger">${overCount} over budget</span>` : ''}
-      ${warnCount  ? `<span class="badge badge-warning">${warnCount} near limit</span>` : ''}
-      ${!overCount && !warnCount ? `<span class="badge badge-success">All budgets on track 🎉</span>` : ''}
-    </div>
-    ${rows.join('')}`;
 }
